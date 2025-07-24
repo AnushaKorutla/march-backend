@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../Schema/User');
+const bcrypt = require('bcrypt')
+const crypto = require('crypto');
+
 
 router.post('/register', async(req, res)=>{
     try{
         const{name, email,password, age}=req.body;
-        const newUser = new User({name, email, password, age});
+        const hashedPassword = await bcrypt.hash(password,10);
+        const newUser = new User({name, email, password:hashedPassword, age});
         await newUser.save();
         res.status(201).json({message:'User registered successfull', User:newUser});
     }
@@ -20,7 +24,7 @@ router.post("/login", async (req, res) =>{
         const{email, password} = req.body;
 
         const user = await User.findOne({email});
-        if (user && user.password === password){
+        if (user && await bcrypt.compare (password, user.password)){
             res.send("Login success");
         }else{
             res.status(400).send("Invalid email or password");
@@ -83,7 +87,7 @@ router.put('/update/:id', async(req, res)=>{
         }
         updatedUser.name = name;
         updatedUser.email= email;
-        updatedUser.password= password;
+        updatedUser.password= await bcrypt.hash(password,10);
         updatedUser.age = age;
         await updatedUser.save();
         res.status(200).json({message:'User updated successfully', user: updatedUser});
